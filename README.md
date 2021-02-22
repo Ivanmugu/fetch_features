@@ -31,18 +31,29 @@ The program reads the accession or BioSample numbers of the list. Then, it enter
 into the nuccore database and collects all the molecular features of each accession
 or BioSample number in the list.
 
-If you provide a list of accession numbers you have two options. The first
-option is to get only the features of the provided accession list. In the second
-option, the program gets the BioSample number to the provided accession number.
-Then, this BioSample number gives access to all the accesion numbers associated
-with the BioSample number. Finally, the program fetches the molecular features of
-all the accessin numbers associated with this BioSample number. In this second
-option, the program selects the most updated information of every molecule
-(chromosome and/or plasmid(s)).
-
 You can create one list of accession or BioSample numbers in Excel by saving the
 file as txt. The list needs a header, if it doesn't have one the first accession or
-BioSample numbers is not going to be included.
+BioSample numbers is not going to be included. The program will ask you:
+```
+Does your list have accession numbers or biosample numbers (accession or biosample)? 
+```
+If you choose biosample, you will get the features of all the accession numbers
+associated with the BioSample number.
+
+If you choose accession, you have two options, yes or no. The program will ask you:
+
+```
+If you have a list of accession numbers, do you want to get the most updated features of 
+all the related accession numbers that belong to the same BioSample (yes or no)?
+```
+
+If you answer no, you will get only the features of the provided accession list.
+If you anwwer yes, the program gets the BioSample number to the provided accession number.
+Then, this BioSample number gives access to all the accesion numbers associated
+with the BioSample number. Finally, the program fetches the molecular features of
+all the accession numbers associated with this BioSample number. In this second
+option, the program selects the most updated information of every molecule
+(chromosome and/or plasmid(s)).
 
 ## Example of usage
 Before running the program you need a folder with all the relevant information. For example:
