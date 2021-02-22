@@ -19,7 +19,7 @@ You can get more information about those modules by visiting:
 * https://biopython.org/
 * https://github.com/cs50/python-cs50
 
-Finally, you need the script database.py, that is provided in this project, in the
+Finally, you need the script database.py (that is provided in this project) in the
 same folder where you will run fetch_features.py
 
 # About fetch_features.py
@@ -29,7 +29,7 @@ numbers.
 
 The program reads the accession or BioSample numbers of the list. Then, it enters
 into the nuccore database and collects all the molecular features of each accession
-of BioSample number in the list.
+or BioSample number in the list.
 
 If you provide a list of accession numbers you have two options. The first
 option is to get only the features of the provided accession list. In the second
@@ -64,8 +64,8 @@ Next, you run the code as follows:
 ```bash
 python3 fetch_features.py
 ```
-After running the code you will be asked to provide some information. Don't forget to 
-give your email address.
+After running the code you will be asked to provide some information. The last question is
+your email address. NCBI needs your email address.
 ```
 Does your list have accession numbers or biosample numbers (accession or biosample)? accession
 If you have a list of accession numbers, do you want to get the most updated features of 
