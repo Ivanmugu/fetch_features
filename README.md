@@ -16,8 +16,11 @@ pip3 install cs50
 ```
 
 You can get more information about those modules by visiting:
-https://biopython.org/
-https://github.com/cs50/python-cs50
+* https://biopython.org/
+* https://github.com/cs50/python-cs50
+
+Finally, you need the script database.py, that is provided in this project, in the
+same folder where you will run fetch_features.py
 
 # About fetch_features.py
 ## Function:
@@ -42,9 +45,27 @@ file as txt. The list needs a header, if it doesn't have one the first accession
 BioSample numbers is not going to be included.
 
 ## Example of usage
+Before running the program you need a folder with all the relevant information. For example:
+
+```
+Documents
++-------- Results
+          +------ fetch_features.py
+          +------ database.py
+          +------ accession_numbers_list.txt
+```
+The accession_numbers_list.txt has to have a header. The file should look like this:
+```
+Accession_number
+CP043542.1
+CP049163.1
+```
+Next, you run the code as follows:
 ```bash
 python3 fetch_features.py
 ```
+After running the code you will be asked to provide some information. Don't forget to 
+give your email address.
 ```
 Does your list have accession numbers or biosample numbers (accession or biosample)? accession
 If you have a list of accession numbers, do you want to get the most updated features of 
@@ -69,3 +90,4 @@ Number of sequences saved after processing: 2
 Done!
 You should have a results.csv file in your folder
 ```
+That's it!
