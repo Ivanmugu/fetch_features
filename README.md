@@ -4,18 +4,23 @@ In order to run this script you need python3.
 Additionaly, you need the Biopython and cs50 modules.
 Therefore, you have to install the Biopython and cs50 modules in your computer.
 If you want to know if you have those modules type the following in the terminal:
+
+```bash
 pip3 list
+```
 
 If you don't have those modules, you can install them by typing:
+```bash
 pip3 install biopython
 pip3 install cs50
+```
 
 You can get more information about those modules by visiting:
 https://biopython.org/
 https://github.com/cs50/python-cs50
 
 # About fetch_features.py
-Function:
+## Function:
 Fetch information from a list of Genebank accession numbers or a list of BioSample
 numbers.
 
@@ -36,9 +41,9 @@ You can create one list of accession or BioSample numbers in Excel by saving the
 file as txt. The list needs a header, if it doesn't have one the first accession or
 BioSample numbers is not going to be included.
 
-# Example of usage
-
-Usage: python3 fetch_features.py
+## Example of usage
+```bash
+python3 fetch_features.py
 Does your list have accession numbers or biosample numbers (accession or biosample)? accession
 If you have a list of accession numbers, do you want to get the most updated features of 
 all the related accession numbers that belong to the same BioSample (yes or no)? yes
@@ -61,3 +66,4 @@ Going to download record 501 to 616 from set 2
 Number of sequences saved after processing: 2
 Done!
 You should have a results.csv file in your folder
+```
