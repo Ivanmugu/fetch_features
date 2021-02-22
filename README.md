@@ -44,6 +44,8 @@ BioSample numbers is not going to be included.
 ## Example of usage
 ```bash
 python3 fetch_features.py
+```
+```
 Does your list have accession numbers or biosample numbers (accession or biosample)? accession
 If you have a list of accession numbers, do you want to get the most updated features of 
 all the related accession numbers that belong to the same BioSample (yes or no)? yes
