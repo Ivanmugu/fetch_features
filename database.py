@@ -52,7 +52,7 @@ def BioSample_list(accession_number_list, email_address):
 #           Function to parse information fetched from nuccore NCBI         #
 #############################################################################
 # It takes as arguments the handle to fetch information, the set or batch
-# batch number, and a conunter to keep track of the sequences retrieved.
+# batch number, and a counter to keep track of the retrieved sequences.
 def parser(fetch_handle, set, seq_counter):
     # Creating a list to save records in dictionaries
     records = []
@@ -404,7 +404,8 @@ def clean_features(raw_data):
         info['Gen_Coverage'] = results[i][24]
         info['Seq_Technol'] = results[i][25]
         records.append(info.copy())
-
+    
+    conn.close()
     return records
 
-    conn.close()
+    

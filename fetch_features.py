@@ -1,35 +1,18 @@
-# fetch_features.py version 1.0
-# Created by Ivan Munoz-Gutierrez
-# Date 2020-07-26
-#
-# Function:
-# This program needs Biophyton and cs50 modules. If you don't have those
-# modules, please visit https://biopython.org/ and
-# https://github.com/cs50/python-cs50 for more information.
-#
-# The program fetches information from a list of Genebank accession numbers or
-# a list of BioSample numbers. The program enters the nuccore database and
-# collects all the features of the corresponding list of accession numbers.
-# When you enter a list of accession numbers you have two options. The first
-# option is to get the features of the provided accession list. The second one
-# is to get the features of all the accession numbers associated with an
-# specific BioSample number. In this second option, the program gets the
-# BioSample number of every accession number in the list, accesses the nuccore
-# database with the BioSample number and selects the most updated information
-# of every molecule (chromosome and/or plasmid(s)).
-#
-# You can create one list of accession numbers in Excel by saving the file as
-# txt. The list needs a header, if it doesn't have one the first accession
-# numbers is not going to be included.
-#
-# Usage: python fetch_features.py
+#!/usr/bin/env python3
+"""
+File name: fetch_features.py
+Author: Ivan Munoz-Gutierrez
+Date created: 07/26/2020
+Date last modified: 02/21/2021
+Python version: 3.9
+"""
 
 #############################################################################
 #                       Importing relevant modules                          #
 #############################################################################
 from Bio import Entrez
 from Bio import SeqIO
-from database import *
+from database import BioSample_list, parser, clean_features
 import csv
 import sys
 import cs50
@@ -44,7 +27,7 @@ if len(sys.argv) != 1:
 # Getting type of input data.
 while True:
     type_list = cs50.get_string(
-        "Does your list have accession numbers or "
+        "\nDoes your list have accession numbers or "
         "biosample numbers (accession or biosample)? ")
     type_list = type_list.lower()
     if type_list == 'accession' or type_list == 'biosample':
@@ -53,19 +36,21 @@ while True:
 # Asking about getting data from all BioSample related acc numbers
 while True:
     get_biosample = cs50.get_string(
-        "If you have a list of accession numbers, do you want to get the "
+        "\nIf you have a list of accession numbers, do you want to get the "
         "most updated features of \nall the related accession numbers that "
         "belong to the same BioSample (yes or no)? ")
     get_biosample = get_biosample.lower()
     if get_biosample == 'yes' or get_biosample == 'no':
         break
 
-# Gettin name of infile.txt
-infile = cs50.get_string('Provide the name of your infile.txt: ')
+# Getting name of infile.txt
+infile = cs50.get_string('\nProvide the name of your infile.txt: ')
 
 # IMPORTANT: always provide your email address to GenBank
-email_address = cs50.get_string("Provide your email address to the NCBI: ")
+email_address = cs50.get_string("\nProvide your email address to the NCBI: ")
 Entrez.email = email_address
+
+print("\nConecting to NCBI...")
 
 # Opening infile.txt
 with open(infile, 'r') as reader:
@@ -363,7 +348,7 @@ with open("results.csv", "w") as results:
             fetch_handle.close()
 
 # If everything was done OK print Done and exit the program
-print("""Done!
+print("""\nDone!
 You should have a results.csv file in your folder""")
 
 sys.exit(0)
