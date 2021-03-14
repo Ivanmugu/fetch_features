@@ -1,72 +1,245 @@
-# Scripts to be used in fetch_features.py and biosample.py
-# Created by: Ivan Munoz-Gutierrez
-# Date: 2020-07-25
+"""
+File name: database.py
+Authos: Ivan Munoz-Gutierrez
+Date created: 07/25/2020
+Date last modified: 03/13/2021
+Python version: 3.9
 
-# Importing relevant modules
+This file contains functions to be used by fetch_features.py and biosample.py
+"""
+
 from Bio import Entrez
 from Bio import SeqIO
 from datetime import datetime
-import csv
 import sqlite3
-import sys
 
 
-#############################################################################
-#         Function to make a list of the BioSample accession numbers        #
-#############################################################################
-# It takes as argument a list of accession numbers and email address
-def BioSample_list(accession_number_list, email_address):
+def make_list_accessions(infile):
+    """
+    Reads a txt file that contains a list of UIDs, as accession or BioSample
+    numbers, and creates a python list with these UIDs.
+
+    Parameters
+    ----------
+    infile : string
+        Path to txt file that contains UIDs as accession or BioSample numbers.
+        Every UID must be separated by a new line character (enter). The list
+        can be created in excell by saving the file as txt or using a text
+        editor. The txt file must have a header or the function will not
+        include the first UID.
+
+    Returns
+    -------
+    list_accessions: list
+        Returns a list of accession numbers. For example, a return list from a
+        txt file with nine accession number would look like the following list:
+        ['CP049609.1', 'CP028704.1', 'CP043542.1', 'CP040107.1', 'CP041747.1',
+         'CP042638.1', 'CP015023.1', 'CP049163.1', 'CP051714.1']
+    """
+    # Opening infile.txt
+    with open(infile, 'r') as reader:
+        # Skip the header
+        next(reader)
+        # Creating a list of accession numbers
+        list_accessions = reader.readlines()
+
+    # Remove the '\n' character
+    for i, accession_number in enumerate(list_accessions):
+        list_accessions[i] = accession_number.replace('\n', '')
+
+    return list_accessions
+
+
+def mk_uid_batch_list(list_accessions):
+    """
+    Makes a list of batches of commma-delimited UIDs.
+
+    Every batch created is a set of UIDs separated by commas, and every batch
+    has at least the indicaded number of UIDs provided in the batch_size
+    variable. Examples of UIDs are accession numbers and BioSample numbers.
+
+    Parameters
+    ----------
+    list_accessions : list
+        List of UIDs to be proccessed
+
+    Returns
+    -------
+    submission_list : list
+        List of strings containg UIDs separated by commas. An example of a
+        submission_list created with accession numbers and a batch size of
+        three look like the following:
+        ['CP049609.1,CP028704.1,CP043542.1',
+         'CP040107.1,CP041747.1,CP042638.1',
+         'CP015023.1,CP049163.1,CP051714.1']
+    """
+    # Number of sequences or UIDs to be proccessed
+    number_seq = len(list_accessions)
+    # Number of sequences or UIDs to be requested by batch. Limit the batch to
+    # less than 200.
+    batch_size = 5
+    # Declaring the list of batches of comma-delimited UIDs that will be return
+    # after processing
+    submission_list = []
+    # Counter to access the list_accessions
+    counter_accessions = 0
+
+    # Loop to create the list of UIDs by batches
+    for start in range(0, number_seq, batch_size):
+        end = min(number_seq, start + batch_size)
+        # This list is going to save temporarily the batch of UIDs that are
+        # going to be converted into a string of comma-separated UIDs
+        set_list = []
+        # Making batches
+        for _ in range(start, end):
+            set_list.append(list_accessions[counter_accessions])
+            counter_accessions += 1
+        # Converting the list into string
+        set_list = ','.join(set_list)
+        submission_list.append(set_list)
+
+    return submission_list
+
+
+def get_biosample_numbers(submission_list, email_address):
+    """
+    Retrieves BioSample numbers from a list that contains batches of accession
+    numbers.
+
+    This function uses Entrez.epost to upload batches of accession numbers to
+    the Entrez History server. To avoid problems with large batches of
+    accession numbers, limit the number of accession number per batch to 200.
+
+    Parameters
+    ----------
+    submission_list : list
+        List of strings containg batches of accession numbers separated by
+        commas. The following is an example of a submission_list containing
+        batches of three accession numbers per element in the list:
+        ["CP049609.1,CP028704.1,CP043542.1",
+         "CP040107.1,CP041747.1,CP042638.1",
+         "CP015023.1,CP049163.1,CP051714.1"]
+    email_address : string
+        User's email address is requested by NCBI
+
+    Returns
+    -------
+    biosample_numbers : list
+        List of BioSample numbers retrieved from Entrez by using the provided
+        list of accession numbers. The following is a return list containing
+        the corresponding BioSample numbers of the example provided in the
+        Parameters section:
+        ["SAMN07169263", "SAMN08875353", "SAMEA104140560",
+         "SAMN05360217", "SAMN12302771", "SAMN12500846",
+         "SAMN04202539", "SAMN14133047", "SAMN14609782"]
+
+    Notes
+    -----
+    For more information about Entrez.epost read chapter 9.4 of Biopython
+    Tutorial and Cookbook (Biopython 1.76) and visit:
+    https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.EPost
+    """
+    # Creating list to save BioSample numbers
+    biosample_numbers = []
+
     # Provide email address to GeneBank
     Entrez.email = email_address
 
-    # Using '.efetch' to retrieve the information (BioSample number) of the
-    # requested accesion number.
-    # db -> database, nuccore -> nucleotide, id -> id number of the requested
-    # information, in this case the accesion number provided in argv[1],
-    # rettype -> retrieval type, retmode -> determines the format of the return
-    # output
-    handle = Entrez.efetch(db='nuccore', id=accession_number_list,
-                           rettype='gb', retmode='text')
+    # Initializing last accession number
+    end = 0
 
-    # Copying the information in computer memory
-    record_acc = SeqIO.read(handle, 'gb')
+    # Fetching BioSample numbers from GenBank by batches
+    for _, submission in enumerate(submission_list):
+        start = end
+        # submission_list is a list of accession numbers separated by
+        # commas. Therefore, the number of commas indicate the number of
+        # accession numbers.
+        batch_size = submission.count(',') + 1
+        end = end + batch_size
 
-    handle.close()
+        # Printing download batch record
+        print(f"Retrieving BioSample numbers from record {start + 1} to {end}")
 
-    # Convert the list dbxrefs into dictionary to get the BioSample number
-    dictionary_dbxrefs = {}
-    for index in range(len(record_acc.dbxrefs)):
-        list_dbxrefs = record_acc.dbxrefs[index].split(':')
-        dictionary_dbxrefs[list_dbxrefs[0]] = list_dbxrefs[1]
+        # Posting the submission_list.
+        # Because we are requesting information from a huge list of acc
+        # numbers, we have to use the ".epost" function which uploads a
+        # list of UIs (acc numbers) for use in subsequent searches.
+        # From .epost we can get the QueryKey and the WebEnv which define
+        # our history session and can be used to performe searches of data.
+        posting = Entrez.epost('nuccore', id=submission)
+        search_results = Entrez.read(posting)
 
-    # Getting the BioSample number
-    biosample_number = dictionary_dbxrefs['BioSample']
+        # Copying cookie "WebEnv" and query "QueryKey" from our history
+        # session to keep track of our batch fetching.
+        # WevEnv -> Web environment string returned from a previous
+        # ESearch, EPost or ELink call; QueryKey -> Integer query key
+        # returned by a previous ESearch, EPost or ELink call
+        webenv = search_results["WebEnv"]
+        query_key = search_results["QueryKey"]
 
-    print(f'\nRequested accesion number: {record_acc.id}')
-    print(f'Corresponding BioSample number: {biosample_number}')
+        # Getting the batch information
+        # db -> database, nuccore -> nuleotide, rettype -> retrieval type
+        # retmode -> determines the format of the return output
+        # retstart -> sequential index of the first UID in the retrieved
+        # set_number to be shown in the XML output
+        # retmax -> total number of UIDs from the retrieved set_number to be
+        # shown in the XML output
+        # idtype-> specifies the type of identifier to return for sequence
+        # databases, acc -> accesion number
+        fetch_handle = Entrez.efetch(
+            db="nuccore",
+            rettype="gb",
+            retmode="text",
+            retstart=0,
+            retmax=batch_size,
+            webenv=webenv,
+            query_key=query_key,
+            idtype="acc"
+        )
 
-    return biosample_number
+        # Parsing throw the fetched information
+        for seq_record in SeqIO.parse(fetch_handle, "gb"):
+            # Looping over database cross-references (dbxrefs)
+            for xref in enumerate(seq_record.dbxrefs):
+                list_dbxrefs = xref[1].split(':')
+                # Getting the BioSample number
+                if 'BioSample' in list_dbxrefs:
+                    biosample_numbers.append(list_dbxrefs[1])
+                    break
+
+    return biosample_numbers
 
 
-#############################################################################
-#           Function to parse information fetched from nuccore NCBI         #
-#############################################################################
-# It takes as arguments the handle to fetch information, the set or batch
-# batch number, and a counter to keep track of the retrieved sequences.
-def parser(fetch_handle, set, seq_counter):
+def parser(fetch_handle, set_number):
+    """
+    Function to parse information fetched from nuccore NCBI
+
+    Parameters
+    ----------
+    fetch_handle : network connection
+        Pointer to a network connection that will allow to download and parse
+        the requested sequences from the internet
+    set_number : inteter
+        Number of the batch of sequences that is being analyzed. This number
+        will help to keep track of the downloaded sequences.
+    seq_counter : integer
+        Number of the position of the first accession number in the set. If
+        set_number is 1, seq_counter has to be 1.
+    
+    Returns
+    -------
+    records : list
+        List of dictionaries. Every dictionary corresponds to fetch features of
+        one accession number.
+    """
     # Creating a list to save records in dictionaries
     records = []
     info = {}
 
-    counter = seq_counter
-
     # Parsing throw the fetched information
     for seq_record in SeqIO.parse(fetch_handle, "gb"):
-        # keeping track of the set (or batch) analyzed
-        info['set_batch'] = set
-
-        # Keeping track of the number of sequence saved
-        info['counter'] = counter
+        # keeping track of the set_number (or batch) analyzed
+        info['set_batch'] = set_number
 
         # Extracting description
         info['description'] = seq_record.description
@@ -77,9 +250,12 @@ def parser(fetch_handle, set, seq_counter):
         # '.seq' is an object with the sequence itself
         info['size'] = len(seq_record.seq)
 
+        #######################################################################
         # '.annotations' is a dictionary of aditional information about the
         # sequence as last modification date, topology, sequence_version,
         # organims, references, etc.
+        #######################################################################
+        # Getting date and give format
         if 'date' in seq_record.annotations:
             mod_date = seq_record.annotations['date']
             mod_date = datetime.strptime(mod_date, '%d-%b-%Y')
@@ -87,17 +263,21 @@ def parser(fetch_handle, set, seq_counter):
             info['mod_date'] = mod_date
         else:
             info['mod_date'] = 'missing'
-
+        # Getting topology
         if "topology" in seq_record.annotations:
             info['topology'] = seq_record.annotations["topology"]
         else:
             info['topology'] = "missing"
 
-        # Checking whether it is chromosome or plasmid
+        # Checking whether it is chromosome or plasmid. The 4,000,000 used in
+        # size is an arbitrary number that considers chormosomes of that length
+        # Getting chromosome
         if 'chromosome' in info['description']:
             info['molecule'] = 'chromosome'
+        # Getting chromosome
         elif info['size'] >= 4000000 and info['topology'] == 'circular':
             info['molecule'] = 'chromosome'
+        # Getting plasmid
         elif 'plasmid' in info['description']:
             info['molecule'] = 'plasmid'
         else:
@@ -109,78 +289,76 @@ def parser(fetch_handle, set, seq_counter):
 
         # Looping throw list feature
         for index in feature:
-
             # '.type' is only a description of the type of feature
             # that could be source, CDS, gene, etc.
             # In source we can find organism, strain, host, country, etc.
             if index.type == "source":
-
                 # Creating a dictionary of the qualifiers from source
                 dictionary = dict(index.qualifiers)
-
                 # '.get' gives a list
+                # Getting molecule type
                 if "mol_type" in dictionary:
                     info['mol_type'] = dictionary.get("mol_type")[0]
                 else:
                     info['mol_type'] = 'missing'
-
+                # Getting organism
                 if 'organism' in dictionary:
                     info['organism'] = dictionary.get('organism')[0]
                 else:
                     info['organism'] = 'missing'
-
+                # Getting strain
                 if 'strain' in dictionary:
                     info['strain'] = dictionary.get('strain')[0]
                 else:
                     info['strain'] = 'missing'
-
+                # Getting isolation source
                 if 'isolation_source' in dictionary:
                     info['isolation_source'] =\
                         dictionary.get('isolation_source')[0]
                 else:
                     info['isolation_source'] = 'missing'
-
+                # Getting host
                 if 'host' in dictionary:
                     info['host'] = dictionary.get('host')[0]
                 else:
                     info['host'] = 'missing'
-
+                # Getting plasmid
                 if 'plasmid' in dictionary:
                     info['plasmid'] = dictionary.get('plasmid')[0]
                 else:
                     info['plasmid'] = 'missing'
-
+                # Getting country
                 if 'country' in dictionary:
                     info['country'] = dictionary.get('country')[0]
                 else:
                     info['country'] = 'missing'
-
+                # Getting coordinates
                 if "lat_lon" in dictionary:
                     info['lat_lon'] = dictionary.get("lat_lon")[0]
                 else:
                     info['lat_lon'] = 'missing'
-
+                # Getting collection date
                 if "collection_date" in dictionary:
                     info['collection_date'] =\
                         dictionary.get("collection_date")[0]
                 else:
                     info['collection_date'] = 'missing'
-
+                # Getting notes
                 if "note" in dictionary:
                     info['note'] = dictionary.get("note")[0]
                 else:
                     info['note'] = 'missing'
-
+                # Getting serovar
                 if "serovar" in dictionary:
                     info['serovar'] = dictionary.get("serovar")[0]
                 else:
                     info['serovar'] = 'missing'
-
+                # Getting collected by
                 if "collected_by" in dictionary:
                     info['collected_by'] = dictionary.get("collected_by")[0]
                 else:
                     info['collected_by'] = 'missing'
-
+                # Getting genotype
                 if "genotype" in dictionary:
                     info['genotype'] = dictionary.get("genotype")[0]
                 else:
@@ -205,7 +383,6 @@ def parser(fetch_handle, set, seq_counter):
             info['BioProject'] = dictionary_dbxrefs.get("BioProject")
         else:
             info['BioProject'] = 'missing'
-
         if "BioSample" in dictionary_dbxrefs:
             info['BioSample'] = dictionary_dbxrefs.get("BioSample")
         else:
@@ -213,51 +390,71 @@ def parser(fetch_handle, set, seq_counter):
 
         # Getting the Genome-Assembly-Data
         # Checking if the sequence has structured_comment
-        if "structured_comment" in seq_record.annotations and\
-                "Genome-Assembly-Data" in\
-                seq_record.annotations["structured_comment"]:
-            if "Assembly Method" in\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]:
-                info['Assem_Method'] =\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]["Assembly Method"]
+        if (("structured_comment" in seq_record.annotations)
+            and ("Genome-Assembly-Data" in (
+                seq_record.annotations["structured_comment"]))):
+            # Getting Assembly Method
+            if ("Assembly Method" in (
+                    seq_record.annotations["structured_comment"]
+                                          ["Genome-Assembly-Data"])):
+                info['Assem_Method'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Genome-Assembly-Data"]
+                                          ["Assembly Method"])
             else:
                 info['Assem_Method'] = "missing"
-
-            if "Genome Coverage" in\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]:
-                info['Gen_Coverage'] =\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]["Genome Coverage"]
+            # Getting Genome Coverage
+            if "Genome Coverage" in (
+                seq_record.annotations["structured_comment"]
+                                      ["Genome-Assembly-Data"]):
+                info['Gen_Coverage'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Genome-Assembly-Data"]
+                                          ["Genome Coverage"])
             else:
                 info['Gen_Coverage'] = "missing"
-
-            if "Sequencing Technology" in\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]:
-                info['Seq_Technol'] =\
-                    seq_record.annotations["structured_comment"]["Genome-Assembly-Data"]["Sequencing Technology"]
+            # Getting Sequencing Technology
+            if "Sequencing Technology" in (
+                seq_record.annotations["structured_comment"]
+                                      ["Genome-Assembly-Data"]):
+                info['Seq_Technol'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Genome-Assembly-Data"]
+                                          ["Sequencing Technology"])
             else:
                 info['Seq_Technol'] = "missing"
-
-        elif "structured_comment" in seq_record.annotations and\
-                "Assembly-Data" in\
-                seq_record.annotations["structured_comment"]:
-            if "Assembly Method" in\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]:
-                info['Assem_Method'] =\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]["Assembly Method"]
+        # Extracting data from structured comment
+        elif "structured_comment" in seq_record.annotations and (
+            "Assembly-Data" in (
+                seq_record.annotations["structured_comment"])):
+            # Getting Assembly Method
+            if "Assembly Method" in (
+                seq_record.annotations["structured_comment"]
+                                      ["Assembly-Data"]):
+                info['Assem_Method'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Assembly-Data"]
+                                          ["Assembly Method"])
             else:
                 info['Assem_Method'] = "missing"
-
-            if "Genome Coverage" in\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]:
-                info['Gen_Coverage'] =\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]["Genome Coverage"]
+            # Getting Genome Coverage
+            if "Genome Coverage" in (
+                seq_record.annotations["structured_comment"]
+                                      ["Assembly-Data"]):
+                info['Gen_Coverage'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Assembly-Data"]
+                                          ["Genome Coverage"])
             else:
                 info['Gen_Coverage'] = "missing"
-
-            if "Sequencing Technology" in\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]:
-                info['Seq_Technol'] =\
-                    seq_record.annotations["structured_comment"]["Assembly-Data"]["Sequencing Technology"]
+            # Getting Sequencing Technology
+            if "Sequencing Technology" in (
+                seq_record.annotations["structured_comment"]
+                                      ["Assembly-Data"]):
+                info['Seq_Technol'] = (
+                    seq_record.annotations["structured_comment"]
+                                          ["Assembly-Data"]
+                                          ["Sequencing Technology"])
             else:
                 info['Seq_Technol'] = "missing"
 
@@ -269,18 +466,26 @@ def parser(fetch_handle, set, seq_counter):
         # Copying info (dictionary) into records (list)
         records.append(info.copy())
 
-        counter += 1
-
-    return (records, counter)
+    return records
 
 
-#############################################################################
-#         Function to clean up features obtained from a BioSample           #
-#         and get the most uptaded information                              #
-#############################################################################
-# It takes as argument raw_data that is a list of dictionaries holding all the
-# data downloaded from an specific BioSample associated accession numbers
 def clean_features(raw_data):
+    """
+    Cleans up the features obtained from a BioSample number and get the most
+    updated information
+
+    Parameters
+    ----------
+    raw_data : list
+        List of dictionaries holding all the data downloaded from a specific
+        BioSample associated accession numbers.
+
+    Returns
+    -------
+    recods : list
+        List of dictionaries holding the most updated information from
+        BioSample associated accession numbers.
+    """
 
     # Creating empty features.db
     open('features.db', 'w').close()
@@ -288,12 +493,12 @@ def clean_features(raw_data):
     # Opening features.db for sqlite3
     conn = sqlite3.connect('features.db')
 
+    # Creating a cursor
     c = conn.cursor()
 
-    # Creating table for features raw data
+    # Creating table in SQL for the features of the raw data fetched from NCBI
     c.execute("""CREATE TABLE features_raw (
                 set_batch int,
-                counter integer,
                 description text,
                 accession text,
                 size integer,
@@ -321,91 +526,93 @@ def clean_features(raw_data):
                 )""")
     conn.commit()
 
-    # Transfering results obtained from NCBI into table features_raw
-    for i in range(len(raw_data)):
+    # Transfering results obtained from NCBI into the table features_raw
+    # created in SQL
+    for _, raw_result in enumerate(raw_data):
         c.execute("""INSERT INTO features_raw
-                     VALUES(:set_batch, :counter, :description, :accession,
+                     VALUES(:set_batch, :description, :accession,
                             :size, :molecule, :mod_date, :topology, :mol_type,
                             :organism, :strain, :isolation_source, :host,
                             :plasmid, :country, :lat_lon, :collection_date,
                             :note, :serovar, :collected_by, :genotype,
                             :BioProject, :BioSample, :Assem_Method,
                             :Gen_Coverage, :Seq_Technol)""",
-                  {'set_batch': int(raw_data[i]['set_batch']),
-                   'counter': int(raw_data[i]['counter']),
-                   'description': raw_data[i]['description'],
-                   'accession': raw_data[i]['accession'],
-                   'size': int(raw_data[i]['size']),
-                   'molecule': raw_data[i]['molecule'],
-                   'mod_date': raw_data[i]['mod_date'],
-                   'topology': raw_data[i]['topology'],
-                   'mol_type': raw_data[i]['mol_type'],
-                   'organism': raw_data[i]['organism'],
-                   'strain': raw_data[i]['strain'],
-                   'isolation_source': raw_data[i]['isolation_source'],
-                   'host': raw_data[i]['host'],
-                   'plasmid': raw_data[i]['plasmid'],
-                   'country': raw_data[i]['country'],
-                   'lat_lon': raw_data[i]['lat_lon'],
-                   'collection_date': raw_data[i]['collection_date'],
-                   'note': raw_data[i]['note'],
-                   'serovar': raw_data[i]['serovar'],
-                   'collected_by': raw_data[i]['collected_by'],
-                   'genotype': raw_data[i]['genotype'],
-                   'BioProject': raw_data[i]['BioProject'],
-                   'BioSample': raw_data[i]['BioSample'],
-                   'Assem_Method': raw_data[i]['Assem_Method'],
-                   'Gen_Coverage': raw_data[i]['Gen_Coverage'],
-                   'Seq_Technol': raw_data[i]['Seq_Technol']})
+                  {'set_batch': int(raw_result['set_batch']),
+                   'description': raw_result['description'],
+                   'accession': raw_result['accession'],
+                   'size': int(raw_result['size']),
+                   'molecule': raw_result['molecule'],
+                   'mod_date': raw_result['mod_date'],
+                   'topology': raw_result['topology'],
+                   'mol_type': raw_result['mol_type'],
+                   'organism': raw_result['organism'],
+                   'strain': raw_result['strain'],
+                   'isolation_source': raw_result['isolation_source'],
+                   'host': raw_result['host'],
+                   'plasmid': raw_result['plasmid'],
+                   'country': raw_result['country'],
+                   'lat_lon': raw_result['lat_lon'],
+                   'collection_date': raw_result['collection_date'],
+                   'note': raw_result['note'],
+                   'serovar': raw_result['serovar'],
+                   'collected_by': raw_result['collected_by'],
+                   'genotype': raw_result['genotype'],
+                   'BioProject': raw_result['BioProject'],
+                   'BioSample': raw_result['BioSample'],
+                   'Assem_Method': raw_result['Assem_Method'],
+                   'Gen_Coverage': raw_result['Gen_Coverage'],
+                   'Seq_Technol': raw_result['Seq_Technol']})
     conn.commit()
 
     # Getting the most updated files and ordering by size
-    c.execute("""SELECT * FROM (
-                 SELECT table_one.*
+    c.execute(
+        """
+        SELECT *
+          FROM (
+               SELECT table_one.*
                  FROM features_raw table_one
-                 WHERE table_one.mod_date = (SELECT MAX(table_two.mod_date)
-                                             FROM features_raw table_two
-                                             WHERE table_two.size = table_one.size)
-                                             )
-                 WHERE molecule != "missing"
-                 ORDER BY size DESC
-                 """)
+                WHERE table_one.mod_date = (
+                      SELECT MAX(table_two.mod_date)
+                        FROM features_raw table_two
+                       WHERE table_two.size = table_one.size))
+         WHERE molecule != "missing"
+         ORDER BY size DESC
+        """)
 
+    # Extracting the updated results from SQL. The fetchall will create a list
+    # of tuples
     results = c.fetchall()
 
     # Converting results (list of tuples) into a list of dictionaries
     records = []
     info = {}
-    for i in range(len(results)):
-        info['set_batch'] = int(results[i][0])
-        info['counter'] = int(results[i][1])
-        info['description'] = results[i][2]
-        info['accession'] = results[i][3]
-        info['size'] = int(results[i][4])
-        info['molecule'] = results[i][5]
-        info['mod_date'] = results[i][6]
-        info['topology'] = results[i][7]
-        info['mol_type'] = results[i][8]
-        info['organism'] = results[i][9]
-        info['strain'] = results[i][10]
-        info['isolation_source'] = results[i][11]
-        info['host'] = results[i][12]
-        info['plasmid'] = results[i][13]
-        info['country'] = results[i][14]
-        info['lat_lon'] = results[i][15]
-        info['collection_date'] = results[i][16]
-        info['note'] = results[i][17]
-        info['serovar'] = results[i][18]
-        info['collected_by'] = results[i][19]
-        info['genotype'] = results[i][20]
-        info['BioProject'] = results[i][21]
-        info['BioSample'] = results[i][22]
-        info['Assem_Method'] = results[i][23]
-        info['Gen_Coverage'] = results[i][24]
-        info['Seq_Technol'] = results[i][25]
+    for _, updated_result in enumerate(results):
+        info['set_batch'] = int(updated_result[0])
+        info['description'] = updated_result[1]
+        info['accession'] = updated_result[2]
+        info['size'] = int(updated_result[3])
+        info['molecule'] = updated_result[4]
+        info['mod_date'] = updated_result[5]
+        info['topology'] = updated_result[6]
+        info['mol_type'] = updated_result[7]
+        info['organism'] = updated_result[8]
+        info['strain'] = updated_result[9]
+        info['isolation_source'] = updated_result[10]
+        info['host'] = updated_result[11]
+        info['plasmid'] = updated_result[12]
+        info['country'] = updated_result[13]
+        info['lat_lon'] = updated_result[14]
+        info['collection_date'] = updated_result[15]
+        info['note'] = updated_result[16]
+        info['serovar'] = updated_result[17]
+        info['collected_by'] = updated_result[18]
+        info['genotype'] = updated_result[19]
+        info['BioProject'] = updated_result[20]
+        info['BioSample'] = updated_result[21]
+        info['Assem_Method'] = updated_result[22]
+        info['Gen_Coverage'] = updated_result[23]
+        info['Seq_Technol'] = updated_result[24]
         records.append(info.copy())
-    
     conn.close()
-    return records
 
-    
+    return records
