@@ -110,7 +110,7 @@ In this example, we will request to get the features of all accession numbers as
 their corresponding BioSample number. The last question is your email address. NCBI needs
 your email address.
 ```
-Does your list have accession numbers or biosample numbers (tyoe accession or biosample)? accession
+Does your list have accession numbers or biosample numbers (type accession or biosample)? accession
 
 If you have a list of accession numbers, do you want to get the most updated features of 
 all the related accession numbers that belong to the same BioSample (yes or no)? yes
