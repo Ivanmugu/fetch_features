@@ -33,14 +33,24 @@ or BioSample number in the list.
 
 You can create one list of accession or BioSample numbers in Excel by saving the
 file as txt. The list needs a header, if it doesn't have one the first accession or
-BioSample numbers is not going to be included. The program will ask you:
-```
-Does your list have accession numbers or biosample numbers (accession or biosample)? 
-```
-If you choose biosample, you will get the features of all the accession numbers
-associated with the BioSample number.
+BioSample numbers is not going to be included.
 
-If you choose accession, you have two options, yes or no. The program will ask you:
+As mentioned before, the program can use accession of BioSample numbers. Therefore,
+when you run the program, the program will ask you:
+```
+Does your list have accession numbers or biosample numbers (type accession or biosample)? 
+```
+
+If you choose biosample, you will get the features of all the accession numbers
+associated with the BioSample number. For example, if your list has the next two
+BioSample numbers, SAMN07169263 and SAMN08875353, you will get the features of the 
+following accession numbers:
+```
+SAMN07169263 will return the features of: CP049609.1, CP049611.1 and CP049610.1.
+SAMN08875353 will return the features of: CP028704.1 and CP028705.1.
+```
+
+If you choose accession, the program will ask you to select between two options as follows:
 
 ```
 If you have a list of accession numbers, do you want to get the most updated features of 
@@ -51,7 +61,21 @@ If you answer no, you will get only the features of the provided accession list.
 If you anwwer yes, the program gets the BioSample number to the provided accession number.
 Then, this BioSample number gives access to all the accesion numbers associated
 with the BioSample number. Finally, the program fetches the molecular features of
-all the accession numbers associated with this BioSample number. In this second
+all the accession numbers associated with this BioSample number. For example, if your list
+has the next two accession numbers, CP049609.1 and CP028704.1, the program will follow the
+next steps:
+```
+1. Get the corresponding BioSample numbers of CP049609.1 and CP028704.1 which are SAMN07169263
+and SAMN08875353, respectively.
+2. Access the each BioSample number, get all the associated accession numbers to each BioSample
+number and get the features of all the accession numbers. Therefore, the program will get the
+features of the following accession numbers:
+    i)  CP049609.1, CP049611.1 and CP049610.1 that are associated to SAMN07169263.
+    ii) CP028704.1 and CP028705.1 that are associated to SAMN08875353.
+```
+Sometimes, one BioSample number can have redundant information as outdated accession numbers,
+accession numbers that have 
+In this second
 option, the program selects the most updated information of every molecule
 (chromosome and/or plasmid(s)).
 
