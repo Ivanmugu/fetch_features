@@ -149,3 +149,4 @@ You should have a results.csv file in your folder
 That's it!
 If you opened the results.csv file in Excell you will see something like this:
 
+!(https://github.com/Ivanmugu/fetch_features/blob/main/results.png)
