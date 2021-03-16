@@ -1,7 +1,7 @@
 # fetch_features
 
 In order to run this script you need python3.
-Additionaly, you need the Biopython and cs50 modules.
+Additionaly, you need the modules: Biopython 1.78 and cs50 6.0.2
 Therefore, you have to install the Biopython and cs50 modules in your computer.
 If you want to know if you have those modules type the following in the terminal:
 
@@ -120,7 +120,7 @@ Provide the name of your infile.txt: accession_list.txt
 Provide your email address to the NCBI: user@email.com
 ```
 
-After connecting to NCBI you will see the followin messages during the fetching proccess.
+After connecting to NCBI you will see the following messages during the fetching proccess.
 ```
 Requested accession or BioSample numbers: 2
 
