@@ -1,7 +1,7 @@
 # fetch_features
 
 In order to run this script you need python3.
-Additionaly, you need the modules: Biopython 1.78 and cs50 6.0.2
+Additionaly, you need the modules: Biopython 1.78 and cs50 6.0.2.
 Therefore, you have to install the Biopython and cs50 modules in your computer.
 If you want to know if you have those modules type the following in the terminal:
 
